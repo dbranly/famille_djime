@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="app-version" content="1.0.0">
   <title>Famille DJIME</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -68,6 +69,29 @@
     .modal-overlay {
       backdrop-filter: blur(4px);
     }
+    
+    /* 📱 Responsive optimizations */
+    @media (max-width: 768px) {
+      .tree-node {
+        transform: scale(1);
+      }
+      .tree-node:active {
+        transform: scale(0.98);
+      }
+      /* Plus gros sur mobile */
+      .person-card {
+        min-width: 140px !important;
+        font-size: 0.875rem;
+      }
+    }
+    
+    /* Touch-friendly */
+    @media (hover: none) and (pointer: coarse) {
+      button, .tree-node {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-blue-50">
@@ -75,14 +99,23 @@
   
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
-    // Système de versioning automatique
-    const DATA_VERSION = "2025-03-03-jerry-deceased";
-    const currentVersion = localStorage.getItem('dataVersion');
     
-    if (currentVersion !== DATA_VERSION) {
-      localStorage.removeItem('familyTreeData');
-      localStorage.setItem('dataVersion', DATA_VERSION);
+    // ✨ SYSTÈME AUTO-UPDATE UNIVERSEL (Mobile + Desktop)
+    const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
+    const storedVersion = localStorage.getItem('appVersion');
+    
+    if (storedVersion !== APP_VERSION) {
+      console.log('🔄 Nouvelle version détectée:', APP_VERSION);
+      localStorage.clear();
+      localStorage.setItem('appVersion', APP_VERSION);
+      
+      // Recharge une seule fois
+      if (!sessionStorage.getItem('versionUpdated')) {
+        sessionStorage.setItem('versionUpdated', 'true');
+        window.location.reload(true);
+      }
     }
+    
     // ==================== REAL FAMILY DATA ====================
     const initialFamilyData = [
       {
@@ -1170,7 +1203,10 @@
       const [selectedPerson, setSelectedPerson] = useState(null);
       const [searchQuery, setSearchQuery] = useState('');
       const [activeView, setActiveView] = useState('tree');
-      const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [sidebarOpen, setSidebarOpen] = useState(() => {
+        // Sidebar cachée par défaut sur mobile, ouverte sur desktop
+        return window.innerWidth >= 768;
+      });
       const [editingPerson, setEditingPerson] = useState(null);
       const [showAddModal, setShowAddModal] = useState(false);
       const [collapsedNodes, setCollapsedNodes] = useState(new Set());
@@ -1281,27 +1317,53 @@
       return (
         <div className="h-screen flex flex-col">
           <header className="bg-white border-b border-gray-200 shadow-sm">
-            <div className="px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-gold-400 rounded-lg flex items-center justify-center">
+            <div className="px-3 md:px-6 py-3 md:py-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 md:gap-4">
+                {/* Bouton Toggle Sidebar (mobile en premier) */}
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition lg:hidden"
+                  title={sidebarOpen ? "Masquer le menu" : "Afficher le menu"}
+                >
+                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-primary-500 to-gold-400 rounded-lg flex items-center justify-center">
                     <Icons.Tree />
                   </div>
-                  <div>
-                    <h1 className="text-xl font-display font-bold text-primary-700">DJIMETree</h1>
-                    <p className="text-xs text-gray-500">Famille DJIME</p>
+                  <div className="hidden sm:block">
+                    <h1 className="text-lg md:text-xl font-display font-bold text-primary-700">DJIMETree</h1>
+                    <p className="text-xs text-gray-500 hidden md:block">Famille DJIME</p>
                   </div>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
-                <div className="relative">
+              <div className="flex items-center gap-1 md:gap-3">
+                {/* Bouton Toggle Sidebar (desktop) */}
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="hidden lg:flex p-2 hover:bg-gray-100 rounded-lg transition"
+                  title={sidebarOpen ? "Masquer le menu" : "Afficher le menu"}
+                >
+                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {sidebarOpen ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    )}
+                  </svg>
+                </button>
+
+                <div className="relative hidden md:block">
                   <input
                     type="text"
                     placeholder="Rechercher..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none w-64"
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none w-40 lg:w-64"
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                     <Icons.Search />
@@ -1309,7 +1371,7 @@
                 </div>
 
                 {activeView === 'tree' && (
-                  <>
+                  <div className="hidden lg:flex gap-2">
                     <button 
                       onClick={handleExpandAll}
                       className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm font-medium"
@@ -1328,28 +1390,42 @@
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
                       </svg>
                     </button>
-                  </>
+                  </div>
                 )}
                 
-                <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium cursor-pointer">
-                  <Icons.Upload />
-                  Importer
-                  <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
-                </label>
-                
-                <button
-                  onClick={handleExportJSON}
-                  className="flex items-center gap-2 px-4 py-2 bg-gold-400 text-white rounded-lg hover:bg-gold-500 transition font-medium"
-                >
-                  <Icons.Download />
-                  Exporter
-                </button>
+                <div className="hidden md:flex gap-2">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium cursor-pointer text-sm">
+                    <Icons.Upload />
+                    <span className="hidden lg:inline">Importer</span>
+                    <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
+                  </label>
+                  
+                  <button
+                    onClick={handleExportJSON}
+                    className="flex items-center gap-2 px-3 py-2 bg-gold-400 text-white rounded-lg hover:bg-gold-500 transition font-medium text-sm"
+                  >
+                    <Icons.Download />
+                    <span className="hidden lg:inline">Exporter</span>
+                  </button>
+                </div>
               </div>
             </div>
           </header>
           
           <div className="flex-1 flex overflow-hidden">
-            <aside className={`bg-white border-r border-gray-200 transition-all ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+            {/* Sidebar - Overlay sur mobile, fixe sur desktop */}
+            <aside className={`
+              bg-white border-r border-gray-200 transition-all duration-300 z-20
+              lg:relative lg:translate-x-0
+              ${sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0 lg:w-16'}
+              fixed inset-y-0 left-0 lg:static
+            `}>
+              {sidebarOpen && (
+                <div 
+                  className="lg:hidden fixed inset-0 bg-black/30 -z-10"
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
               <nav className="p-4 space-y-2">
                 <button
                   onClick={() => setActiveView('tree')}
@@ -1393,7 +1469,11 @@
             </main>
             
             {selectedPerson && (
-              <aside className="w-96 border-l border-gray-200 shadow-xl overflow-hidden">
+              <aside className="
+                fixed lg:relative inset-0 lg:inset-auto lg:w-96 
+                border-l border-gray-200 shadow-xl overflow-hidden z-30
+                lg:z-auto
+              ">
                 <DetailPanel
                   person={selectedPerson}
                   allPersons={persons}
