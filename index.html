@@ -75,7 +75,14 @@
   
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
-
+    // Système de versioning automatique
+    const DATA_VERSION = "2025-03-03-jerry-deceased";
+    const currentVersion = localStorage.getItem('dataVersion');
+    
+    if (currentVersion !== DATA_VERSION) {
+      localStorage.removeItem('familyTreeData');
+      localStorage.setItem('dataVersion', DATA_VERSION);
+    }
     // ==================== REAL FAMILY DATA ====================
     const initialFamilyData = [
       {
